@@ -11,6 +11,7 @@ library(stringr)
 library(tidyverse)
 library(shinyjs)
 library(plyr)
+library(ggthemes)
 
 GET("https://query.data.world/s/xzozlqhuagxyazzgc3avtgcaw2yqxk", write_disk(tf <- tempfile(fileext = ".xls")))
 df <- read_excel(tf)
@@ -91,6 +92,8 @@ df$grain2[is.na(df$grain2)]<- "NA"
 df_long <- gather(df, material, proportion, Quartz:Pteropods, factor_key=TRUE)
 df_long[sapply(df_long, is.character)] <- lapply(df_long[sapply(df_long, is.character)], as.factor)
 
+levels_material=levels(df_long$material)
+
 #runGitHub("shiny_takeaway","mariacristinasi")!!!!!!!!!!!!!!
 
 # Define UI for application that draws a histogram
@@ -106,17 +109,25 @@ ui <-fluidPage(titlePanel("Analysis of composition and grain size of rocks"),
                                                       choices = levels_core,
                                                       selected = 1),
                                 downloadButton("report", "Generate report")),
-                           mainPanel(plotOutput("cores_plot") #outputID="cores_plot", click="point_click"),plotOutput("plot_point")
+                           mainPanel(plotly::plotlyOutput("cores_plot") 
                            )) 
     ),
-    tabPanel("Composition", #Explain what components are organic and non-organic
+    tabPanel("Composition per point", #Explain what components are organic and non-organic
              selectInput("cores2", label = h5("Select the core:"), 
                          choices = levels_core,
                          selected = 1),
              selectInput("depth_selection", label = h5("Select the depth (cm):"), 
-                         choices = levels(as.factor(df_long$depth)),#!!!!!!!!!!!!!!!!!
+                         choices = levels(as.factor(df_long$depth)),
                          selected = 1),
-             plotOutput("compos_plot") #Include some plotly!!
+             plotOutput("compos_plot") 
+    ),
+    
+    tabPanel("Materials pressence per depth", #Explain what components are organic and non-organic
+             selectInput("mat", label = h5("Select a material:"), 
+                         choices = levels_material,
+                         selected = 1),
+             plotOutput(outputId="compos_depth", click="point_click"),
+             tableOutput("plot_point")
     ),
     useShinyjs()
     
@@ -140,7 +151,9 @@ server <- function(input, output, session) {
 
     core_depth_selected <- reactive({df_long %>% filter(depth == input$depth_selection & core == input$cores2)})
     
-    output$cores_plot <- renderPlot(ggplot(core_selected(),
+    mat_selected <- reactive({df_long %>% filter(material %in% input$mat)})
+    
+    output$cores_plot <- plotly::renderPlotly(ggplot(core_selected(),
                              aes(x=grain1, y=depth, size=grain1)) + ylab("Depth (cm)") +
                           geom_point(colour = "brown4", shape=1) + theme(legend.position = "none") +
                           ggtitle("Grain size per depth") +  
@@ -150,8 +163,8 @@ server <- function(input, output, session) {
                                                       "f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5)))
 
     output$compos_plot <- renderPlot(ggplot(core_depth_selected(),
-                             aes(x=material, y=proportion))  +
-                          geom_bar(stat='identity', aes(fill=material)) + 
+                             aes(x=material, y=proportion))  +  theme(legend.position = "none") +
+                          geom_bar(stat='identity', colour="gray27", aes(fill=material)) + 
                           scale_fill_manual(values=setNames(c("mistyrose", "lightsalmon1", "orange", "lightsteelblue4", "mediumturquoise", "khaki1", 
                                                                 "gold", "mediumorchid1"),
                                                               c("Quartz", "Feldespar", "Dark Lithics", "Manganese", "Forams", 
@@ -159,6 +172,25 @@ server <- function(input, output, session) {
                           xlim("Quartz", "Feldespar", "Dark Lithics", "Manganese", "Forams", 
                                "Sponge Spicules", "Carbonate Fragments", "Pteropods") + 
                           ylim("R", "R-P", "P", "P-C", "C", "C-A", "A"))
+    
+    output$compos_depth <- renderPlot(ggplot(mat_selected(),
+                                            aes(x=depth, y=proportion)) + theme(legend.position = "none") +
+                                         geom_point(aes(fill=material, colour=material, size=3)) + 
+                                         scale_fill_manual(values=setNames(c("mistyrose", "lightsalmon1", "orange", "lightsteelblue4", "mediumturquoise", "khaki1", 
+                                                                             "gold", "mediumorchid1"),
+                                                                           c("Quartz", "Feldespar", "Dark Lithics", "Manganese", "Forams", 
+                                                                             "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
+                                         scale_colour_manual(values=setNames(c("mistyrose", "lightsalmon1", "orange", "lightsteelblue4", "mediumturquoise", "khaki1", 
+                                                                             "gold", "mediumorchid1"),
+                                                                           c("Quartz", "Feldespar", "Dark Lithics", "Manganese", "Forams", 
+                                                                             "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
+                                         xlim(0,250) + 
+                                         ylim("R", "R-P", "P", "P-C", "C", "C-A", "A"))
+    
+    output$plot_point <- renderTable({
+            nearPoints(mat_selected() %>% select(core, depth, proportion), 
+                       input$point_click, maxpoints = 1)
+    })
     
 }
 
