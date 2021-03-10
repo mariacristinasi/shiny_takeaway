@@ -88,6 +88,9 @@ revalue(df$grain1, c("f. sand"="f.sand"))
 levels(df$grain2)=c(levels(df$grain2), "NA")
 df$grain2[is.na(df$grain2)]<- "NA"
 
+df_long <- gather(df, material, proportion, Quartz:Pteropods, factor_key=TRUE)
+df_long[sapply(df_long, is.character)] <- lapply(df_long[sapply(df_long, is.character)], as.factor)
+
 #runGitHub("shiny_takeaway","mariacristinasi")!!!!!!!!!!!!!!
 
 # Define UI for application that draws a histogram
@@ -102,11 +105,19 @@ ui <-fluidPage(titlePanel("Analysis of composition and grain size of rocks"),
                                selectInput("cores", label = h5("Select the core:"), 
                                                       choices = levels_core,
                                                       selected = 1),
-                                downloadButton("report", "Generate report")), #Must be configurated
+                                downloadButton("report", "Generate report")),
                            mainPanel(plotOutput("cores_plot") #outputID="cores_plot", click="point_click"),plotOutput("plot_point")
                            )) 
     ),
-    
+    tabPanel("Composition", #Explain what components are organic and non-organic
+             selectInput("cores2", label = h5("Select the core:"), 
+                         choices = levels_core,
+                         selected = 1),
+             selectInput("depth_selection", label = h5("Select the depth (cm):"), 
+                         choices = levels(as.factor(df_long$depth)),#!!!!!!!!!!!!!!!!!
+                         selected = 1),
+             plotOutput("compos_plot") #Include some plotly!!
+    ),
     useShinyjs()
     
 ))
@@ -114,21 +125,40 @@ ui <-fluidPage(titlePanel("Analysis of composition and grain size of rocks"),
 
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session) {
     
     observe(if(input$all) disable("cores") else enable("cores"))
     
     core_selected <- reactive({if(!input$all) {df %>% filter(core %in% input$cores)} else{df}})
     
-    output$cores_plot <- renderPlot(ggplot(core_selected(),
-                                 aes(x=grain1, y=depth, size=grain1)) + ylab("Depth (cm)") +
-                              geom_point(colour = "brown4", shape=1) + theme(legend.position = "none") +
-                              ggtitle("Grain size per depth") +  
-                              geom_point(aes(x=grain2, y=depth, size=grain2), colour= "brown4", shape=1)+
-                              xlim("f.sand", "v.f.sand", "silt", "clay") + ylim(250,0) +
-                              scale_size_manual(values =c("NA"=2,"f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5,
-                                                          "f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5)))
+    core_selected2 <- reactive({df %>% filter(core %in% input$cores2)})
+    
+    observeEvent(input$cores2,
+            updateSelectInput(session, "depth_selection",
+                         choices = df_long$depth[df_long$core == input$cores2]
+      ))
 
+    core_depth_selected <- reactive({df_long %>% filter(depth == input$depth_selection & core == input$cores2)})
+    
+    output$cores_plot <- renderPlot(ggplot(core_selected(),
+                             aes(x=grain1, y=depth, size=grain1)) + ylab("Depth (cm)") +
+                          geom_point(colour = "brown4", shape=1) + theme(legend.position = "none") +
+                          ggtitle("Grain size per depth") +  
+                          geom_point(aes(x=grain2, y=depth, size=grain2), colour= "brown4", shape=1)+
+                          xlim("f.sand", "v.f.sand", "silt", "clay") + ylim(250,0) +
+                          scale_size_manual(values =c("NA"=2,"f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5,
+                                                      "f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5)))
+
+    output$compos_plot <- renderPlot(ggplot(core_depth_selected(),
+                             aes(x=material, y=proportion))  +
+                          geom_bar(stat='identity', aes(fill=material)) + 
+                          scale_fill_manual(values=setNames(c("mistyrose", "lightsalmon1", "orange", "lightsteelblue4", "mediumturquoise", "khaki1", 
+                                                                "gold", "mediumorchid1"),
+                                                              c("Quartz", "Feldespar", "Dark Lithics", "Manganese", "Forams", 
+                                                                "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
+                          xlim("Quartz", "Feldespar", "Dark Lithics", "Manganese", "Forams", 
+                               "Sponge Spicules", "Carbonate Fragments", "Pteropods") + 
+                          ylim("R", "R-P", "P", "P-C", "C", "C-A", "A"))
     
 }
 
