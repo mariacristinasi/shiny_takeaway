@@ -121,8 +121,12 @@ ui <-fluidPage(titlePanel("Analysis of composition and grain size of rocks"),
                          selected = 1),
              plotOutput("compos_plot") 
     ),
-    
-    tabPanel("Materials pressence per depth", #Explain what components are organic and non-organic
+    tabPanel("Composition per depth", 
+             sliderInput("range_depth1", label="Select the range of depth (cm):", min = 0, max = 250, value = 0),
+             sliderInput("range_depth2", label="", min = 0, max = 250, value = 250),
+             plotOutput("mat_depth") 
+    ),
+    tabPanel("Materials pressence per depth", #Explain that size shows frequency
              selectInput("mat", label = h5("Select a material:"), 
                          choices = levels_material,
                          selected = 1),
@@ -153,6 +157,9 @@ server <- function(input, output, session) {
     
     mat_selected <- reactive({df_long %>% filter(material %in% input$mat)})
     
+    min_depth <- reactive({min(input$range_depth1, input$range_depth2)})
+    max_depth <- reactive({max(input$range_depth1, input$range_depth2)})
+    
     output$cores_plot <- plotly::renderPlotly(ggplot(core_selected(),
                              aes(x=grain1, y=depth, size=grain1)) + ylab("Depth (cm)") +
                           geom_point(colour = "brown4", shape=1) + theme(legend.position = "none") +
@@ -163,26 +170,46 @@ server <- function(input, output, session) {
                                                       "f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5)))
 
     output$compos_plot <- renderPlot(ggplot(core_depth_selected(),
-                             aes(x=material, y=proportion))  +  theme(legend.position = "none") +
-                          geom_bar(stat='identity', colour="gray27", aes(fill=material)) + 
-                          scale_fill_manual(values=setNames(c("mistyrose", "lightsalmon1", "orange", "lightsteelblue4", "mediumturquoise", "khaki1", 
+                             aes(x=material, y=proportion))  +  theme(legend.position = "none",
+                          panel.background = element_rect(fill = "white", color = "gray60")) +
+                          geom_bar(stat='identity', colour="gray60", aes(fill=material)) + 
+                          scale_fill_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                 "gold", "mediumorchid1"),
-                                                              c("Quartz", "Feldespar", "Dark Lithics", "Manganese", "Forams", 
+                                                              c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
                                                                 "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
-                          xlim("Quartz", "Feldespar", "Dark Lithics", "Manganese", "Forams", 
+                          xlim("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
                                "Sponge Spicules", "Carbonate Fragments", "Pteropods") + 
                           ylim("R", "R-P", "P", "P-C", "C", "C-A", "A"))
     
+    output$mat_depth <- renderPlot({ggplot(data.frame(material=df_long$material[df_long$depth >= min_depth() & df_long$depth <= max_depth()],
+                                            proportion=df_long$proportion[df_long$depth >= min_depth() & df_long$depth <= max_depth()]),
+                                          aes(x=material, y=proportion))  +  theme(legend.position = "none",
+                                       panel.background = element_rect(fill = "white", color = "gray60")) +
+                                       geom_count(aes(fill=material, colour=material)) + 
+                                       scale_fill_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
+                                                                           "gold", "mediumorchid1"),
+                                                                         c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
+                                                                           "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
+                                       scale_colour_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
+                                                                           "gold", "mediumorchid1"),
+                                                                         c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
+                                                                           "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
+                                       xlim("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
+                                            "Sponge Spicules", "Carbonate Fragments", "Pteropods") + 
+                                       ylim("R", "R-P", "P", "P-C", "C", "C-A", "A")}, bg="transparent", execOnResize = TRUE)
+    
     output$compos_depth <- renderPlot(ggplot(mat_selected(),
-                                            aes(x=depth, y=proportion)) + theme(legend.position = "none") +
+                                            aes(x=depth, y=proportion)) + theme(legend.position = "none",
+                                         panel.grid = element_line(color = "gray80"),
+                                         panel.background = element_rect(fill = "white", color = "gray60")) +
                                          geom_point(aes(fill=material, colour=material, size=3)) + 
-                                         scale_fill_manual(values=setNames(c("mistyrose", "lightsalmon1", "orange", "lightsteelblue4", "mediumturquoise", "khaki1", 
+                                         scale_fill_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                              "gold", "mediumorchid1"),
-                                                                           c("Quartz", "Feldespar", "Dark Lithics", "Manganese", "Forams", 
+                                                                           c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
                                                                              "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
-                                         scale_colour_manual(values=setNames(c("mistyrose", "lightsalmon1", "orange", "lightsteelblue4", "mediumturquoise", "khaki1", 
+                                         scale_colour_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                              "gold", "mediumorchid1"),
-                                                                           c("Quartz", "Feldespar", "Dark Lithics", "Manganese", "Forams", 
+                                                                           c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
                                                                              "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
                                          xlim(0,250) + 
                                          ylim("R", "R-P", "P", "P-C", "C", "C-A", "A"))
