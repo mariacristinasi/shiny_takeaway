@@ -2,10 +2,16 @@
 # The app should make use of commands in packages: tidyverse, shinythemes, plotly and shinyjs.
 
 library(shiny)
-library(datasets)
-
+library(ggplot2)
+library(magrittr)
 library(httr)
 library(readxl)
+library(tidyr)
+library(stringr)
+library(tidyverse)
+library(shinyjs)
+library(plyr)
+
 GET("https://query.data.world/s/xzozlqhuagxyazzgc3avtgcaw2yqxk", write_disk(tf <- tempfile(fileext = ".xls")))
 df <- read_excel(tf)
 # https://data.world/us-doi-gov/24d428dc-97cb-4ef3-9bec-5dbd4f966f12
@@ -42,24 +48,88 @@ for (i in 1:nrow(df)){
 }
 df=df[-null_rows,]
 
-#We have 1 NA in manganese, we are assuming there are no manganese in this sample
+#We have 1 NA and 3 "?", we are assuming these components are no present
 df[is.na(df)] ="-"
 
+b=0
+for (i in 1:ncol(df)){
+    for (j in 1:nrow(df)){
+        if (df[j,i]=="?"){
+            b=b+1
+            df[j,i]="-"
+        } 
+    }
+}
 
-runGitHub("shiny_takeaway","mariacristinasi")
+df$core=df$`Core #`
+df$`Core #`=NULL
+
+df$depth=df$"Depth (cm)"
+df$"Depth (cm)"=NULL
+
+for (i in 1:nrow(df)){
+    if (df$'Grain Size'[i]=="silt v.f. sand"){
+        df$'Grain Size'[i]="silt-v.f. sand"
+    }
+}
+
+df= df %>% separate('Grain Size', c("grain1", "grain2"), "-")
+levels(df$grain1) = c(levels(df$grain1),"f.sand", "v.f.sand", "silt", "clay")
+levels(df$grain2) = c(levels(df$grain2),"f.sand", "v.f.sand", "silt", "clay")
+
+df[sapply(df, is.character)] <- lapply(df[sapply(df, is.character)], as.factor)
+levels_core=levels(df$core)
+
+df[df=="v.f. sand"]="v.f.sand"
+df[df=="v.f sand"]="v.f.sand"
+revalue(df$grain1, c("f. sand"="f.sand"))
+
+
+levels(df$grain2)=c(levels(df$grain2), "NA")
+df$grain2[is.na(df$grain2)]<- "NA"
+
+#runGitHub("shiny_takeaway","mariacristinasi")!!!!!!!!!!!!!!
 
 # Define UI for application that draws a histogram
-ui <- fluidPage(
+ui <-fluidPage(titlePanel("Analysis of composition and grain size of rocks"),
+     tabsetPanel(type = "tabs",
 
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
+    # Filtering per core - write a text explaining clay, etc!!!!!!!!!
+    tabPanel("Grain size",
+             sidebarLayout(position="left",
+                           sidebarPanel(
+                               checkboxInput("all", label = h5("All cores"), value = TRUE),
+                               selectInput("cores", label = h5("Select the core:"), 
+                                                      choices = levels_core,
+                                                      selected = 1),
+                                downloadButton("report", "Generate report")), #Must be configurated
+                           mainPanel(plotOutput("cores_plot") #outputID="cores_plot", click="point_click"),plotOutput("plot_point")
+                           )) 
+    ),
+    
+    useShinyjs()
+    
+))
 
-)
+
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+    
+    observe(if(input$all) disable("cores") else enable("cores"))
+    
+    core_selected <- reactive({if(!input$all) {df %>% filter(core %in% input$cores)} else{df}})
+    
+    output$cores_plot <- renderPlot(ggplot(core_selected(),
+                                 aes(x=grain1, y=depth, size=grain1)) + ylab("Depth (cm)") +
+                              geom_point(colour = "brown4", shape=1) + theme(legend.position = "none") +
+                              ggtitle("Grain size per depth") +  
+                              geom_point(aes(x=grain2, y=depth, size=grain2), colour= "brown4", shape=1)+
+                              xlim("f.sand", "v.f.sand", "silt", "clay") + ylim(250,0) +
+                              scale_size_manual(values =c("NA"=2,"f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5,
+                                                          "f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5)))
 
-
+    
 }
 
 
