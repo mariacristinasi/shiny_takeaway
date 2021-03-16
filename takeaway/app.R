@@ -186,7 +186,7 @@ server <- function(input, output, session) {
                                                               c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
                                                                 "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
                           xlim("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
-                               "Sponge Spicules", "Carbonate Fragments", "Pteropods") + 
+                               "Sponge Sp.", "Carbonate", "Pteropods") + 
                           ylim("R", "R-P", "P", "P-C", "C", "C-A", "A"))
     
     output$mat_depth <- renderPlot({ggplot(data.frame(material=df_long$material[df_long$depth >= min_depth() & df_long$depth <= max_depth()],
@@ -203,7 +203,7 @@ server <- function(input, output, session) {
                                                                          c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
                                                                            "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
                                        xlim("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
-                                            "Sponge Spicules", "Carbonate Fragments", "Pteropods") + 
+                                             "Sponge Sp.", "Carbonate", "Pteropods") + 
                                        ylim("R", "R-P", "P", "P-C", "C", "C-A", "A")}, bg="transparent", execOnResize = TRUE)
     
     output$compos_depth <- renderPlot(ggplot(mat_selected(),
