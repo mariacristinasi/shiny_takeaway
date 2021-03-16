@@ -2,16 +2,16 @@
 # The app should make use of commands in packages: tidyverse, shinythemes, plotly and shinyjs.
 
 library(shiny)
-library(ggplot2)
+library(tidyverse)
 library(magrittr)
 library(httr)
 library(readxl)
-library(tidyr)
 library(stringr)
-library(tidyverse)
-library(shinyjs)
 library(plyr)
-library(ggthemes)
+library(shinythemes)
+library(shinyjs)
+library(shinyWidgets)
+
 
 GET("https://query.data.world/s/xzozlqhuagxyazzgc3avtgcaw2yqxk", write_disk(tf <- tempfile(fileext = ".xls")))
 df <- read_excel(tf)
@@ -97,7 +97,15 @@ levels_material=levels(df_long$material)
 #runGitHub("shiny_takeaway","mariacristinasi")!!!!!!!!!!!!!!
 
 # Define UI for application that draws a histogram
-ui <-fluidPage(titlePanel("Analysis of composition and grain size of rocks"),
+ui <-shinyUI(fluidPage(
+  tags$head(tags$style(
+    HTML('
+         #sidebar {
+            background-color: #FFFFFF;
+        }')
+  )),titlePanel("Analysis of composition and grain size of rocks"),
+     theme = shinytheme("flatly"),
+     useShinyjs() ,
      tabsetPanel(type = "tabs",
 
     # Filtering per core - write a text explaining clay, etc!!!!!!!!!
@@ -107,35 +115,35 @@ ui <-fluidPage(titlePanel("Analysis of composition and grain size of rocks"),
                                checkboxInput("all", label = h5("All cores"), value = TRUE),
                                selectInput("cores", label = h5("Select the core:"), 
                                                       choices = levels_core,
-                                                      selected = 1),
-                                downloadButton("report", "Generate report")),
+                                                      selected = 1)),
                            mainPanel(plotly::plotlyOutput("cores_plot") 
                            )) 
     ),
     tabPanel("Composition per point", #Explain what components are organic and non-organic
-             selectInput("cores2", label = h5("Select the core:"), 
+            sidebarLayout(position="right",
+                          sidebarPanel(id="sidebar",
+            downloadButton("report", "Generate report")),
+            mainPanel(selectInput("cores2", label = h5("Select the core:"), 
                          choices = levels_core,
                          selected = 1),
              selectInput("depth_selection", label = h5("Select the depth (cm):"), 
                          choices = levels(as.factor(df_long$depth)),
-                         selected = 1),
-             plotOutput("compos_plot") 
+                         selected = 1))),
+             plotOutput("compos_plot")
     ),
-    tabPanel("Composition per depth", 
-             sliderInput("range_depth1", label="Select the range of depth (cm):", min = 0, max = 250, value = 0),
+    tabPanel("Composition per depth", #Explain that size shows frequency
+             sliderInput("range_depth1", label=h5("Select the range of depth (cm):"), min = 0, max = 250, value = 0),
              sliderInput("range_depth2", label="", min = 0, max = 250, value = 250),
              plotOutput("mat_depth") 
     ),
-    tabPanel("Materials pressence per depth", #Explain that size shows frequency
+    tabPanel("Materials pressence per depth", #Tell that selecting you can see the core
              selectInput("mat", label = h5("Select a material:"), 
                          choices = levels_material,
                          selected = 1),
              plotOutput(outputId="compos_depth", click="point_click"),
              tableOutput("plot_point")
-    ),
-    useShinyjs()
-    
-))
+    )
+)))
 
 
 
@@ -218,6 +226,32 @@ server <- function(input, output, session) {
             nearPoints(mat_selected() %>% select(core, depth, proportion), 
                        input$point_click, maxpoints = 1)
     })
+    
+    output$report <- downloadHandler(
+      # For PDF output, change this to "report.pdf"
+      filename = "report.pdf",
+      content = function(file) {
+        # Copy the report file to a temporary directory before processing it, in
+        # case we don't have write permissions to the current working dir (which
+        # can happen when deployed).
+        tempReport <- file.path(tempdir(), "report.Rmd")
+        file.copy("report.Rmd", tempReport, overwrite = TRUE)
+        
+        # Set up parameters to pass to Rmd document
+        params <- list(
+          selDepth = isolate(input$depth_selection),
+          selCore = isolate(input$cores2)
+        )
+        
+        # Knit the document, passing in the `params` list, and eval it in a
+        # child of the global environment (this isolates the code in the document
+        # from the code in this app).
+        rmarkdown::render(tempReport, output_file = file,
+                          params = params,
+                          envir = new.env(parent = globalenv())
+        )
+      }
+    )
     
 }
 
