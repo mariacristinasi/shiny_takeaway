@@ -101,6 +101,17 @@ core_depth_selected <- df_long %>%
   filter(depth == params$selDepth & core == params$selCore)
 ```
 
+Selected core:
+
+```{r echo=FALSE, warning=FALSE, comment=NA}
+cat(params$selCore)
+```
+
+Selected depth:
+
+```{r echo=FALSE, warning=FALSE, comment=NA}
+cat(params$selDepth)
+```
 
 ```{r echo=FALSE, warning=FALSE}
 ggplot(core_depth_selected,

@@ -90,20 +90,18 @@ df_long[sapply(df_long, is.character)] <- lapply(df_long[sapply(df_long, is.char
 
 levels_material=levels(df_long$material)
 
-#runGitHub("shiny_takeaway","mariacristinasi")
-
 ui <-shinyUI(fluidPage(
   tags$head(tags$style(
     HTML('
          #sidebar {
             background-color: #FFFFFF;
         }')
-  )),titlePanel(h1("Analysis of composition and grain size of rocks")),
+  )),titlePanel("Analysis of rocks from offshore Puerto Rico and U.S. Virgin Islands"),
      theme = shinytheme("flatly"),
      useShinyjs() ,
      tabsetPanel(type = "tabs",
 
-    tabPanel(h3("Grain size"),
+    tabPanel(h4("Grain size"),
              sidebarLayout(position="left",
                            sidebarPanel(
                                checkboxInput("all", label = h4("All cores"), value = TRUE),
@@ -115,7 +113,7 @@ ui <-shinyUI(fluidPage(
                                      
                            )) 
     ),
-    tabPanel(h3("Composition per point"),             
+    tabPanel(h4("Composition per point"),             
              sidebarLayout(position="right",
                           sidebarPanel(id="sidebar",
             downloadButton("report", h4("Generate report"))),
@@ -128,13 +126,13 @@ ui <-shinyUI(fluidPage(
              plotOutput("compos_plot"), 
              h5(style="border: 1px inset","The proportion levels are R, Rare (1%); P, Present (1-5%); C, Common (5-25 %); and A, Abundant (25-75%)")
     ),
-    tabPanel(h3("Composition per depth"), 
+    tabPanel(h4("Composition per depth"), 
              sliderInput("range_depth1", label=h4("Select the range of depth (cm):"), min = 0, max = 250, value = 0),
              sliderInput("range_depth2", label="", min = 0, max = 250, value = 250),
              plotOutput("mat_depth"),
-             h5(style="border: 1px inset","Circles sizes are related to the pressence of the material at each possible abundance")
+             h5(style="border: 1px inset","Circles sizes are related to the number of smear slides with that abundance of the material")
     ),
-    tabPanel(h3("Materials pressence per depth"),
+    tabPanel(h4("Materials abundance per depth"),
              selectInput("mat", label = h4("Select a material:"), 
                          choices = levels_material,
                          selected = 1),
@@ -168,7 +166,7 @@ server <- function(input, output, session) {
     
     output$cores_plot <- plotly::renderPlotly(ggplot(core_selected(),
                              aes(x=grain1, y=depth, size=grain1)) + 
-                          geom_point(colour = "brown4", shape=1) + theme(legend.position = "none") +
+                          geom_point(colour = "brown4", shape=1) + theme(legend.position = "none", text = element_text(size=14)) +
                           geom_point(aes(x=grain2, y=depth, size=grain2), colour= "brown4", shape=1)+
                           xlim("f.sand", "v.f.sand", "silt", "clay") + ylim(250,0) + xlab("Grain size")+
                           scale_size_manual(values =c("NA"=2,"f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5,
@@ -176,7 +174,7 @@ server <- function(input, output, session) {
 
     output$compos_plot <- renderPlot(ggplot(core_depth_selected(),
                              aes(x=material, y=proportion))  +  theme(legend.position = "none",
-                          panel.background = element_rect(fill = "white", color = "gray60")) +
+                          panel.background = element_rect(fill = "white", color = "gray60"), text = element_text(size=18)) +
                           geom_bar(stat='identity', colour="gray60", aes(fill=material)) + 
                           scale_fill_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                 "gold", "mediumorchid1"),
@@ -189,7 +187,7 @@ server <- function(input, output, session) {
     output$mat_depth <- renderPlot({ggplot(data.frame(material=df_long$material[df_long$depth >= min_depth() & df_long$depth <= max_depth()],
                                             proportion=df_long$proportion[df_long$depth >= min_depth() & df_long$depth <= max_depth()]),
                                           aes(x=material, y=proportion))  +  theme(legend.position = "none",
-                                       panel.background = element_rect(fill = "white", color = "gray60")) +
+                                       panel.background = element_rect(fill = "white", color = "gray60"), text = element_text(size=18)) +
                                        geom_count(aes(fill=material, colour=material)) + 
                                        scale_fill_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                            "gold", "mediumorchid1"),
@@ -206,7 +204,7 @@ server <- function(input, output, session) {
     output$compos_depth <- renderPlot(ggplot(mat_selected(),
                                             aes(x=depth, y=proportion)) + theme(legend.position = "none",
                                          panel.grid = element_line(color = "gray80"),
-                                         panel.background = element_rect(fill = "white", color = "gray60")) +
+                                         panel.background = element_rect(fill = "white", color = "gray60"), text = element_text(size=18)) +
                                          geom_point(aes(fill=material, colour=material, size=3)) + 
                                          scale_fill_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                              "gold", "mediumorchid1"),
@@ -246,7 +244,4 @@ server <- function(input, output, session) {
     
 }
 
-
-
-# Run the application 
 shinyApp(ui = ui, server = server)
