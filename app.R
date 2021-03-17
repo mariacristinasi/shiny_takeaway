@@ -58,6 +58,12 @@ for (i in 1:ncol(df)){
     }
 }
 
+df$"Sponge Sp."=df$"Sponge Spicules"
+df$"Sponge Spicules"=NULL
+
+df$"Carbonate"=df$"Carbonate Fragments"
+df$"Carbonate Fragments"=NULL
+
 df$core=df$`Core #`
 df$`Core #`=NULL
 
@@ -85,7 +91,7 @@ revalue(df$grain1, c("f. sand"="f.sand"))
 levels(df$grain2)=c(levels(df$grain2), "NA")
 df$grain2[is.na(df$grain2)]<- "NA"
 
-df_long <- gather(df, material, proportion, Quartz:Pteropods, factor_key=TRUE)
+df_long <- gather(df, material, proportion, Quartz:Carbonate, factor_key=TRUE)
 df_long[sapply(df_long, is.character)] <- lapply(df_long[sapply(df_long, is.character)], as.factor)
 
 levels_material=levels(df_long$material)
@@ -179,7 +185,7 @@ server <- function(input, output, session) {
                           scale_fill_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                 "gold", "mediumorchid1"),
                                                               c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
-                                                                "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
+                                                                "Sponge Sp.", "Carbonate", "Pteropods"))) +
                           xlim("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
                                "Sponge Sp.", "Carbonate", "Pteropods") + 
                           ylim("R", "R-P", "P", "P-C", "C", "C-A", "A"))
@@ -192,11 +198,11 @@ server <- function(input, output, session) {
                                        scale_fill_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                            "gold", "mediumorchid1"),
                                                                          c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
-                                                                           "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
+                                                                           "Sponge Sp.", "Carbonate", "Pteropods"))) +
                                        scale_colour_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                            "gold", "mediumorchid1"),
                                                                          c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
-                                                                           "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
+                                                                           "Sponge Sp.", "Carbonate", "Pteropods"))) +
                                        xlim("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
                                              "Sponge Sp.", "Carbonate", "Pteropods") + 
                                        ylim("R", "R-P", "P", "P-C", "C", "C-A", "A")}, bg="transparent", execOnResize = TRUE)
@@ -209,11 +215,11 @@ server <- function(input, output, session) {
                                          scale_fill_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                              "gold", "mediumorchid1"),
                                                                            c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
-                                                                             "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
+                                                                             "Sponge Sp.", "Carbonate", "Pteropods"))) +
                                          scale_colour_manual(values=setNames(c("palevioletred", "lightsalmon3", "orange", "lightsteelblue4", "mediumturquoise", "khaki4", 
                                                                              "gold", "mediumorchid1"),
                                                                            c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
-                                                                             "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
+                                                                             "Sponge Sp.", "Carbonate", "Pteropods"))) +
                                          xlim(0,250) + xlab("Depth (cm)") +
                                          ylim("R", "R-P", "P", "P-C", "C", "C-A", "A"))
     
