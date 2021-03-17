@@ -115,3 +115,6 @@ ggplot(core_depth_selected,
                                                                 "Sponge Sp.", "Carbonate", "Pteropods") + 
                           ylim("R", "R-P", "P", "P-C", "C", "C-A", "A")
 ```
+
+<br>
+The proportion levels are R, Rare (1%); P, Present (1-5%); C, Common (5-25 %); and A, Abundant (25-75%).

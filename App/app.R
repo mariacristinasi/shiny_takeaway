@@ -90,7 +90,7 @@ df_long[sapply(df_long, is.character)] <- lapply(df_long[sapply(df_long, is.char
 
 levels_material=levels(df_long$material)
 
-#runGitHub("shiny_takeaway","mariacristinasi")!!!!!!!!!!!!!!
+#runGitHub("shiny_takeaway","mariacristinasi")
 
 ui <-shinyUI(fluidPage(
   tags$head(tags$style(
