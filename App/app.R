@@ -1,8 +1,5 @@
-
-# The app should make use of commands in packages: tidyverse, shinythemes, plotly and shinyjs.
-
 library(shiny)
-library(tidyverse)
+library(tidyverse) #ggplot2
 library(magrittr)
 library(httr)
 library(readxl)
@@ -10,12 +7,11 @@ library(stringr)
 library(plyr)
 library(shinythemes)
 library(shinyjs)
-library(shinyWidgets)
 
 
 GET("https://query.data.world/s/xzozlqhuagxyazzgc3avtgcaw2yqxk", write_disk(tf <- tempfile(fileext = ".xls")))
 df <- read_excel(tf)
-# https://data.world/us-doi-gov/24d428dc-97cb-4ef3-9bec-5dbd4f966f12
+# Data extracted from: https://data.world/us-doi-gov/24d428dc-97cb-4ef3-9bec-5dbd4f966f12
 
 for (i in 1:ncol(df)){
     if (is.na(df[1,i])==0){
@@ -96,58 +92,60 @@ levels_material=levels(df_long$material)
 
 #runGitHub("shiny_takeaway","mariacristinasi")!!!!!!!!!!!!!!
 
-# Define UI for application that draws a histogram
 ui <-shinyUI(fluidPage(
   tags$head(tags$style(
     HTML('
          #sidebar {
             background-color: #FFFFFF;
         }')
-  )),titlePanel("Analysis of composition and grain size of rocks"),
+  )),titlePanel(h1("Analysis of composition and grain size of rocks")),
      theme = shinytheme("flatly"),
      useShinyjs() ,
      tabsetPanel(type = "tabs",
 
-    # Filtering per core - write a text explaining clay, etc!!!!!!!!!
-    tabPanel("Grain size",
+    tabPanel(h3("Grain size"),
              sidebarLayout(position="left",
                            sidebarPanel(
-                               checkboxInput("all", label = h5("All cores"), value = TRUE),
-                               selectInput("cores", label = h5("Select the core:"), 
+                               checkboxInput("all", label = h4("All cores"), value = TRUE),
+                               selectInput("cores", label = h4("Select the core:"), 
                                                       choices = levels_core,
                                                       selected = 1)),
-                           mainPanel(plotly::plotlyOutput("cores_plot") 
+                           mainPanel(plotly::plotlyOutput("cores_plot"),
+                                     h5(style="border: 1px inset", "Circles sizes in the plot are related to the size of the grain for each category. The lowest grain size category is f.sand, while the largest grain size is called clay.")
+                                     
                            )) 
     ),
-    tabPanel("Composition per point", #Explain what components are organic and non-organic
-            sidebarLayout(position="right",
+    tabPanel(h3("Composition per point"),             
+             sidebarLayout(position="right",
                           sidebarPanel(id="sidebar",
-            downloadButton("report", "Generate report")),
-            mainPanel(selectInput("cores2", label = h5("Select the core:"), 
+            downloadButton("report", h4("Generate report"))),
+            mainPanel(selectInput("cores2", label = h4("Select the core:"), 
                          choices = levels_core,
                          selected = 1),
-             selectInput("depth_selection", label = h5("Select the depth (cm):"), 
+             selectInput("depth_selection", label = h4("Select the depth (cm):"), 
                          choices = levels(as.factor(df_long$depth)),
                          selected = 1))),
-             plotOutput("compos_plot")
+             plotOutput("compos_plot"), 
+             h5(style="border: 1px inset","The proportion levels are R, Rare (1%); P, Present (1-5%); C, Common (5-25 %); and A, Abundant (25-75%)")
     ),
-    tabPanel("Composition per depth", #Explain that size shows frequency
-             sliderInput("range_depth1", label=h5("Select the range of depth (cm):"), min = 0, max = 250, value = 0),
+    tabPanel(h3("Composition per depth"), 
+             sliderInput("range_depth1", label=h4("Select the range of depth (cm):"), min = 0, max = 250, value = 0),
              sliderInput("range_depth2", label="", min = 0, max = 250, value = 250),
-             plotOutput("mat_depth") 
+             plotOutput("mat_depth"),
+             h5(style="border: 1px inset","Circles sizes are related to the pressence of the material at each possible abundance")
     ),
-    tabPanel("Materials pressence per depth", #Tell that selecting you can see the core
-             selectInput("mat", label = h5("Select a material:"), 
+    tabPanel(h3("Materials pressence per depth"),
+             selectInput("mat", label = h4("Select a material:"), 
                          choices = levels_material,
                          selected = 1),
              plotOutput(outputId="compos_depth", click="point_click"),
+             h4("Click the desired point to get its core:"),
              tableOutput("plot_point")
     )
 )))
 
 
 
-# Define server logic required to draw a histogram
 server <- function(input, output, session) {
     
     observe(if(input$all) disable("cores") else enable("cores"))
@@ -169,11 +167,10 @@ server <- function(input, output, session) {
     max_depth <- reactive({max(input$range_depth1, input$range_depth2)})
     
     output$cores_plot <- plotly::renderPlotly(ggplot(core_selected(),
-                             aes(x=grain1, y=depth, size=grain1)) + ylab("Depth (cm)") +
+                             aes(x=grain1, y=depth, size=grain1)) + 
                           geom_point(colour = "brown4", shape=1) + theme(legend.position = "none") +
-                          ggtitle("Grain size per depth") +  
                           geom_point(aes(x=grain2, y=depth, size=grain2), colour= "brown4", shape=1)+
-                          xlim("f.sand", "v.f.sand", "silt", "clay") + ylim(250,0) +
+                          xlim("f.sand", "v.f.sand", "silt", "clay") + ylim(250,0) + xlab("Grain size")+
                           scale_size_manual(values =c("NA"=2,"f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5,
                                                       "f.sand"=2, "v.f.sand"=3, "silt"=4, "clay"=5)))
 
@@ -219,33 +216,27 @@ server <- function(input, output, session) {
                                                                              "gold", "mediumorchid1"),
                                                                            c("Quartz", "Feldspar", "Dark Lithics", "Manganese", "Forams", 
                                                                              "Sponge Spicules", "Carbonate Fragments", "Pteropods"))) +
-                                         xlim(0,250) + 
+                                         xlim(0,250) + xlab("Depth (cm)") +
                                          ylim("R", "R-P", "P", "P-C", "C", "C-A", "A"))
     
     output$plot_point <- renderTable({
             nearPoints(mat_selected() %>% select(core, depth, proportion), 
                        input$point_click, maxpoints = 1)
-    })
+    }, bordered=TRUE)
     
     output$report <- downloadHandler(
-      # For PDF output, change this to "report.pdf"
-      filename = "report.pdf",
+      filename = "composition.pdf",
       content = function(file) {
-        # Copy the report file to a temporary directory before processing it, in
-        # case we don't have write permissions to the current working dir (which
-        # can happen when deployed).
         tempReport <- file.path(tempdir(), "report.Rmd")
         file.copy("report.Rmd", tempReport, overwrite = TRUE)
         
-        # Set up parameters to pass to Rmd document
+        
         params <- list(
           selDepth = isolate(input$depth_selection),
           selCore = isolate(input$cores2)
         )
         
-        # Knit the document, passing in the `params` list, and eval it in a
-        # child of the global environment (this isolates the code in the document
-        # from the code in this app).
+        
         rmarkdown::render(tempReport, output_file = file,
                           params = params,
                           envir = new.env(parent = globalenv())
